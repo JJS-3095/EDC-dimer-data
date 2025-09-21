@@ -1,0 +1,84 @@
+﻿1. Assign force field to receptor
+   gmx_mpi pdb2gmx -f 2jf9-DIMER.pdb -o apo.pdb -ignh
+   (Select force field) 8 (CHARMM force field)
+   (Add water) 1
+Pay attention to charges (positive/negative and number: add Cl⁻ ions for positive charge, Na⁺ ions for negative charge)
+
+2. Set up topology file
+Paste into topology (.top) before:
+   ; Include chain topologies
+   #include "BDE-28.itp"(template)
+
+(Set the molecule name; scroll to the end to add small molecule with 1 mol; reopen to adjust formatting)
+
+3. Prepare complex PDB file
+(1) Copy ligand and apo to desktop;
+(2) Insert ligand code after TER in apo (force-field-assigned receptor);
+(3) Copy modified apo back.
+
+4. Define box
+   gmx_mpi editconf -f apo.pdb -o box.gro -box 9 8 7
+   gmx_mpi editconf -f apo.pdb -o box.gro -d 1.4
+
+5. Add water
+   gmx_mpi solvate -cp box.gro -cs spc216.gro -p topol.top -o solv.gro
+6. Add ions
+   gmx_mpi grompp -f ../em.mdp -c solv.gro -p topol.top -o ions.tpr
+   gmx_mpi genion -s ions.tpr -o solv_ions.gro -p topol.top -pname NA -np 1(template)
+   (gmx_mpi genion -s ions.tpr -o solv_ions.gro -p topol.top -nname CL -nn 5)(template)
+   (Select solvent) 15
+Check topol.top file (at the end)
+
+7. Define index groups
+   gmx_mpi make_ndx -f solv_ions.gro -o index.ndx
+   Create Protein_LIG group with 1|13, save group
+
+8. Energy minimization
+   gmx_mpi grompp -f ../mini.mdp -c solv_ions.gro -p topol.top -o mini.tpr -n index.ndx
+   bsub -n 72 -J min -a intelmpi mpirun gmx_mpi mdrun -s mini.tpr -nice 0 -v -noappend -cpi mini.cpt -cpo mini.cpt -cpt 60 -x mini.xtc -o mini.trr -c after_mini -e mini.edr -g mini.log
+
+9. First equilibration: NVT
+   gmx_mpi grompp -f ../nvt.mdp -c after_mini.part0001.gro -p topol.top -n index.ndx -o nvt.tpr
+   bsub -n 72 -J nvt -a intelmpi mpirun gmx_mpi mdrun -s nvt.tpr -nice 0 -v -noappend -cpi nvt.cpt -cpo nvt.cpt -cpt 60 -x nvt.xtc -o nvt.trr -c after_nvt -e nvt.edr -g nvt.log
+
+10. Second equilibration: NPT
+   gmx_mpi grompp -f ../npt.mdp -c after_nvt.part0001.gro -p topol.top -n index.ndx -o npt.tpr 
+   bsub -n 72 -J npt -a intelmpi mpirun gmx_mpi mdrun -s npt.tpr -nice 0 -v -noappend -cpi npt.cpt -cpo npt.cpt -cpt 60 -x npt.xtc -o npt.trr -c after_npt -e npt.edr -g npt.log
+
+11. Production MD run
+   gmx_mpi grompp -f ../md.mdp -c after_npt.part0001.gro -p topol.top -n index.ndx -o md.tpr
+   bsub -n 72 -J mdrun -a intelmpi mpirun gmx_mpi mdrun -s md.tpr -nice 0 -v -noappend -cpi md.cpt -cpo md.cpt -cpt 60 -x md.xtc -o md.trr -c after_md -e md.edr -g md.log
+
+12. Extract conformations
+   gmx_mpi trjconv -o 15ns.pdb -b 15000 -e 15000 -s md.tpr -pbc mol -center -f md.part0001.xtc
+(1) Select center;
+(2) To generate dynamic PDB: replace -f md.part0001.xtc with -f md.part0001.trr.
+   Command help: trjconv_mpi -h
+   Fix trajectory: gmx_mpi trjconv -f md.part0001.xtc -o md_nojump.xtc -pbc nojump
+
+13. Define new index groups
+   gmx_mpi make_ndx -f box.gro -o helix.ndx
+(1) List all groups: l;
+(2) Select groups: ri <start-end>;
+(3) Save & exit: q;
+(4) Abort & exit: Ctrl+C.
+
+14.Calculate RMSD
+   gmx_mpi rms -f md.part0001.xtc -o rmsd-H12.xvg -s md.tpr -n helix.ndx
+
+15. Generate hydrogen bonds
+   gmx_mpi hbond -f md.part0001.xtc -num hbond -s md.tpr
+   g_hbond_mpi -f md.part0001.xtc -num hbond -s md.tpr -n helix.ndx
+
+16. Calculate protein helix center of mass
+   gmx_mpi make_ndx -f box.gro -o H3.ndx
+   gmx_mpi traj -f md.part0001.xtc -com -s md.tpr -ox H3.xvg -n H3.ndx
+
+17. Free Energy Calculations
+   (1) Copy pbsa.mdp and mmpbsa.sh into the folder;
+   (2) source ~/g_mmpbsa512.bash
+        bsub -n 24 -J mdpbsa_jjs sh mmpbsa.sh
+   (3) Total binding free energy:
+        python ../MmPbSaStat.py -m energy_MM.xvg -p polar.xvg -a apolar.xvg -os summary_energy.dat -of full_energy.dat
+   (4) Binding free energy decomposition:
+        python ../MmPbSaDecomp.py -bs -nbs 2000 -m contrib_MM.dat -p contrib_pol.dat -a contrib_apol.dat -o final_contrib_energy.dat -om energyMapIn.dat

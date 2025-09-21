@@ -1,0 +1,14 @@
+#BSUB -J mdrun_thy
+#BSUB -o %J.out 
+#BSUB -a intelmpi
+#BSUB -n 64
+
+grompp_mpi -f minization.mdp -c ions.gro -p topol.top -o mini.tpr
+mpirun.lsf mdrun_mpi -s mini.tpr -nice 0 -v -noappend -cpi mini.cpt -cpo mini.cpt -cpt 60 -x mini.xtc -o mini.trr -c after_mini -e mini.edr -g mini.log
+grompp_mpi -f npt1.mdp -c after_mini.part0001.gro -p topol.top -o npt1.tpr
+mpirun.lsf mdrun_mpi -s npt1.tpr -nice 0 -v -noappend -cpi npt1.cpt -cpo npt1.cpt -cpt 60 -x npt1.xtc -o npt1.trr -c after_npt1 -e npt1.edr -g npt1.log
+grompp_mpi -f npt2.mdp -c after_npt1.part0001.gro -p topol.top -o npt2.tpr 
+mpirun.lsf mdrun_mpi -s npt2.tpr -nice 0 -v -noappend -cpi npt2.cpt -cpo npt2.cpt -cpt 60 -x npt2.xtc -o npt2.trr -c after_npt2 -e npt2.edr -g npt2.log
+grompp_mpi -f md.mdp -c after_npt2.part0001.gro -p topol.top -o md.tpr
+mpirun.lsf mdrun_mpi -s md.tpr -nice 0 -v -noappend -cpi md.cpt -cpo md.cpt -cpt 60 -x md.xtc -o md.trr -c after_md -e md.edr -g md.log
+

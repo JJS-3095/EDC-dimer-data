@@ -1,0 +1,1 @@
+echo -e "1\n13\n" | g_mmpbsa -f md.part0001.xtc -s md.tpr -n index.ndx -i pbsa.mdp -mm energy_MM.xvg -pol polar.xvg -apol apolar.xvg -mmcon contrib_MM.dat -pcon contrib_pol.dat -apcon contrib_apol.dat -pdie 2 -pbsa -decomp -dt 100 -b 15000 -e 20000
