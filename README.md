@@ -11,9 +11,6 @@ The repository is organized into three main sections: experimental data, molecul
 
 - **Experimental Data/**
   - `PDB_structures_320.xlsx` – All ERα/AR monomer and homodimer structures collected from the PDB database
-  - `Interface_HBond_residues.xlsx` – Amino acid residues contributing to dimer interface hydrogen bonds
-  - `BindingEnergy_KeyResidues.xlsx` – Key residues contributing to binding energy
-  - `coregulator_HBond_occupancy_diff.xlsx` – Differences in coregulator hydrogen bond occupancy
   - `BindingEnergy_vs_EC50.xlsx` – Binding energy vs. literature EC50 values
   - `BindingEnergy_vs_ER_AR_effects.xlsx` – Binding energy vs. experimental estrogenic/androgenic effects
 
