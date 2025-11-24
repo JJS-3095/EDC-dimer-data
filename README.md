@@ -1,7 +1,7 @@
 # EDC-dimer-data
 
 This repository contains the datasets, parameter files, and workflows used in the study:  
-**"Is Dimerization Essential for Endocrine-Disrupting Chemicals Screening through Sex Hormone Receptors? Estrogen Receptor Alpha and Androgen Receptor Offer Divergent Answers"**
+**"Dimerization-Driven Quantitative Modeling of Endocrine Disruption via Sex Hormone Receptors: Divergent Predictions for Estrogen Receptor Alpha and Androgen Receptor"**
 
 The repository is organized into three main sections: experimental data, molecular docking, and molecular dynamics simulations, ensuring transparency and reproducibility.
 
